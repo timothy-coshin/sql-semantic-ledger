@@ -1,6 +1,8 @@
 # sql-semantic-ledger
 
-[English](README.md) | [한국어](README.ko.md)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE) ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg) ![Status: pre-alpha](https://img.shields.io/badge/status-pre--alpha-orange.svg)
+
+[English](README.md) | [한국어 (Korean)](README.ko.md)
 
 > **Status: pre-alpha research preview (0.1.0a1).** What is implemented is tested, but APIs may still change.
 > Features marked *planned* in the [feature table](#features) are not implemented; where they have an API stub,
@@ -32,10 +34,10 @@ revising a definition starts a new version whose grade is computed from its own 
 The package is not on PyPI yet, so install it from the repository or from a source checkout:
 
 ```bash
-pip install "sql-semantic-ledger @ git+<repository URL>"          # core (depends on sqlglot only)
-pip install "sql-semantic-ledger[yaml] @ git+<repository URL>"    # + PyYAML, to read metric-store YAML files
+pip install "sql-semantic-ledger @ git+https://github.com/timothy-coshin/sql-semantic-ledger.git"          # core (depends on sqlglot only)
+pip install "sql-semantic-ledger[yaml] @ git+https://github.com/timothy-coshin/sql-semantic-ledger.git"    # + PyYAML, to read metric-store YAML files
 
-git clone <repository URL> sql-semantic-ledger && cd sql-semantic-ledger
+git clone https://github.com/timothy-coshin/sql-semantic-ledger.git && cd sql-semantic-ledger
 pip install -e ".[dev]"                                           # + pytest, to run the tests
 ```
 
@@ -158,40 +160,42 @@ right (a wrong definition was chosen, or the SQL was assembled wrongly). `bound.
 missing from `eps` counts as 1, so the bound stays valid. `bound.estimate_eps` turns judged samples, `(errors, n)`
 per grade, into one-sided upper confidence bounds (exact Clopper-Pearson or Wilson), and `bound.compose` adds up
 the bounds of the steps of a multi-step analysis (union bound). The bound is only as good as the error rates put
-into it: the rates in the examples are illustrative, not measured.
+into it: the rates in the examples are illustrative, not measured. Per-grade rates should be estimated on
+calibration databases and the error rate of confirmed answers, P(wrong | confirmed), checked on held-out
+databases; turning this into a statistical guarantee is planned (see the feature table).
 
 ## Features
 
-Generated with `features.table('en')` (also `ledger features`). Status `implemented` means works and is tested,
-`partial` a first, limited version, `planned` not implemented: calling a planned feature's API stub raises
-`NotImplementedYet`. The *Area* column uses the project's names for the three phases (만들기 = generation/induce,
-믿기 = evaluation/trust, 고치기 = revalidation, 장부 = ledger, 도구 = tooling); *Plan stage* places each feature in the
-project's five-year roadmap (1단계 = stage 1, years 1-3; 2단계 = stage 2, years 4-5; 1차-5차 = year 1-5).
+Generated with `features.table('en')` (also `ledger features`). Status `implemented` means the feature works and
+is tested, `partial` a first, limited version (see the notes below), and `planned` not implemented: calling a
+planned feature's API stub raises `NotImplementedYet`. *Area* names the lifecycle phase (Generation, Evaluation,
+Revalidation) or the ledger and tooling; *Plan stage* places each feature in the five-year research roadmap
+(stage 1 = years 1-3, stage 2 = years 4-5).
 
 | Feature | Area | Status | Plan stage | Module |
 |---|---|---|---|---|
-| Append-only ledger of definitions, evidence and certifications | 장부 | implemented | 1단계 | `model` |
-| SQL normalization and candidate generation (aggregates, conditions, joins, metrics) | 만들기 | implemented | 1단계 1차 | `parse, induce` |
-| Independent-support check: >= 2 different queries or code sites (E1) | 만들기 | implemented | 1단계 1차 | `induce` |
-| Falsification against the database (E2) | 만들기 | implemented | 1단계 1-2차 | `checks` |
-| Counterexample checks after certification (E4) | 믿기 | partial | 1단계 2-3차 | `checks` |
-| Induction from SQL strings embedded in service code (JS/TS/Python) | 만들기(2단계) | implemented | 2단계 4차 | `code_sources` |
-| Induction from ORM queries | 만들기(2단계) | planned | 2단계 4차 | `code_sources` |
-| Static analysis that lifts UI JavaScript computations to definitions | 만들기(2단계) | planned | 2단계 4차 | `code_sources` |
-| Metric-store (YAML) definitions and cross-source / cross-product conflict detection | 만들기(2단계) | partial | 2단계 4차 | `multisource` |
-| Confirm / warn / reject an answer by the evidence grades of its definitions | 믿기 | implemented | 1단계 2차 | `grade` |
-| Error-rate upper bound for an answer | 믿기 | implemented | 1단계 2-3차 | `bound` |
-| Finite-sample upper confidence bounds for per-grade error rates | 믿기 | implemented | 1단계 3차 | `bound` |
-| Composing error bounds over multi-step analyses (union bound) | 믿기(2단계) | implemented | 2단계 5차 | `bound` |
-| Statistical guarantee for confirmed conclusions (threshold calibration) | 믿기(2단계) | planned | 2단계 5차 | `bound` |
-| Rule-based SQL assembly from ledger definitions | 믿기 | partial | 1단계 2차 | `engine` |
-| Choosing ledger definitions for a natural-language question (model) | 믿기 | planned | 1단계 2차 | `engine, propose` |
-| Ledger server for data agents (MCP) | 믿기(2단계) | planned | 2단계 4-5차 | `agent_server` |
-| Impact of definition or table changes on stored answers | 고치기 | implemented | 1단계 3차 | `revalidate` |
-| Selective revalidation plan ranked by error rate x impact within a budget | 고치기 | implemented | 1단계 3차 | `revalidate` |
-| Recall and cost against full revalidation | 고치기 | implemented | 2단계 5차 | `revalidate` |
-| Collecting and judging real definition revisions (SemEvolve benchmark) | 고치기 | planned | 1단계 3차 | `-` |
-| Command-line tool `ledger` | 도구 | implemented | - | `cli` |
+| Append-only ledger of definitions, evidence and certifications | Ledger | implemented | Stage 1 | `model` |
+| SQL normalization and candidate generation (aggregates, conditions, joins, metrics) | Generation | implemented | Stage 1, year 1 | `parse, induce` |
+| Independent-support check: >= 2 different queries or code sites (E1) | Generation | implemented | Stage 1, year 1 | `induce` |
+| Falsification against the database (E2) | Generation | implemented | Stage 1, years 1-2 | `checks` |
+| Counterexample checks after certification (E4) | Evaluation | partial | Stage 1, years 2-3 | `checks` |
+| Induction from SQL strings embedded in service code (JS/TS/Python) | Generation (stage 2) | implemented | Stage 2, year 4 | `code_sources` |
+| Induction from ORM queries | Generation (stage 2) | planned | Stage 2, year 4 | `code_sources` |
+| Static analysis that lifts UI JavaScript computations to definitions | Generation (stage 2) | planned | Stage 2, year 4 | `code_sources` |
+| Metric-store (YAML) definitions and cross-source / cross-product conflict detection | Generation (stage 2) | partial | Stage 2, year 4 | `multisource` |
+| Confirm / warn / reject an answer by the evidence grades of its definitions | Evaluation | implemented | Stage 1, year 2 | `grade` |
+| Error-rate upper bound for an answer | Evaluation | implemented | Stage 1, years 2-3 | `bound` |
+| Finite-sample upper confidence bounds for per-grade error rates | Evaluation | implemented | Stage 1, year 3 | `bound` |
+| Composing error bounds over multi-step analyses (union bound) | Evaluation (stage 2) | implemented | Stage 2, year 5 | `bound` |
+| Statistical guarantee for confirmed conclusions (threshold calibration) | Evaluation (stage 2) | planned | Stage 2, year 5 | `bound` |
+| Rule-based SQL assembly from ledger definitions | Evaluation | partial | Stage 1, year 2 | `engine` |
+| Choosing ledger definitions for a natural-language question (model) | Evaluation | planned | Stage 1, year 2 | `engine, propose` |
+| Ledger server for data agents (MCP) | Evaluation (stage 2) | planned | Stage 2, years 4-5 | `agent_server` |
+| Impact of definition or table changes on stored answers | Revalidation | implemented | Stage 1, year 3 | `revalidate` |
+| Selective revalidation plan ranked by error rate x impact within a budget | Revalidation | implemented | Stage 1, year 3 | `revalidate` |
+| Recall and cost against full revalidation | Revalidation | implemented | Stage 2, year 5 | `revalidate` |
+| Collecting and judging real definition revisions (SemEvolve benchmark) | Revalidation | planned | Stage 1, year 3 | `-` |
+| Command-line tool `ledger` | Tooling | implemented | - | `cli` |
 
 Notes from the feature registry:
 
@@ -226,7 +230,7 @@ python -m pytest -q          # includes the CLI on the toy shop data and a run o
 
 ## Citation
 
-Placeholder until a paper or archived release is available:
+If you use this software, please cite it as:
 
 ```bibtex
 @software{kim_sql_semantic_ledger,
@@ -234,9 +238,23 @@ Placeholder until a paper or archived release is available:
   title   = {sql-semantic-ledger: reference implementation of LEDGER (Lifecycle of Evidence-graded Definitions: Generation, Evaluation, Revalidation)},
   version = {0.1.0a1},
   year    = {2026},
-  url     = {<repository URL>}
+  url     = {https://github.com/timothy-coshin/sql-semantic-ledger}
 }
 ```
+
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `src/sql_semantic_ledger/` | the package: `model` (ledger), `parse` and `induce` (generation), `code_sources` and `multisource` (other sources), `checks`, `grade`, `bound`, `engine` (evaluation), `revalidate`, `cli` |
+| `tests/` | pytest suite (runs the CLI on the toy data and the demo) |
+| `examples/toy_shop/` | a small fictional shop: database builder, SQL history, service code, metric YAML, stored answers, `demo.py` |
+| `CHANGELOG.md` | release notes |
+
+## Contributing and contact
+
+Bug reports and questions are welcome in the [issue tracker](https://github.com/timothy-coshin/sql-semantic-ledger/issues). Please include the command or code,
+the SQL dialect, and the full error message. Pull requests should come with tests (`python -m pytest -q`).
 
 ## License and author
 
