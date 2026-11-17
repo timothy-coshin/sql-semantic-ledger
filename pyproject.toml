@@ -32,12 +32,10 @@ dev = ["pytest>=7", "PyYAML>=6"]
 [project.scripts]
 ledger = "sql_semantic_ledger.cli:main"
 
-# Code URL slot: uncomment and fill in when the repository is public (also replace <repository URL> in the
-# install and citation sections of README.md and README.ko.md).
-# [project.urls]
-# Repository = "<repository URL>"
-# Issues = "<repository URL>/issues"
-# Changelog = "<repository URL>/blob/main/CHANGELOG.md"
+[project.urls]
+Repository = "https://github.com/timothy-coshin/sql-semantic-ledger"
+Issues = "https://github.com/timothy-coshin/sql-semantic-ledger/issues"
+Changelog = "https://github.com/timothy-coshin/sql-semantic-ledger/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/sql_semantic_ledger"]

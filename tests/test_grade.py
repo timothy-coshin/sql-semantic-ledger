@@ -19,7 +19,7 @@ def _certified(d, by='analyst', at='2026-10-01T09:00:00+00:00'):
 
 
 def _plan_example():
-    """The research plan's example: '지난 분기 활성 고객 수'."""
+    """The research plan's worked example: the number of active customers last quarter."""
     active = _certified(_filter('활성 고객', "customers.last_paid_at >= DATE('now', '-90 day') AND customers.is_test = 0",
                                 refs=('q11', 'q12', 'q19'), table='customers'))
     quarter = _filter('지난 분기', "orders.fiscal_quarter = 'last'", refs=('q3', 'q8'))

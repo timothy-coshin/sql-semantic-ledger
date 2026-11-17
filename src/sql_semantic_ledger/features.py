@@ -1,4 +1,4 @@
-"""What is implemented in this release and what is still planned, mapped to the research plan.
+"""What is implemented in this release and what is still planned, mapped to the research roadmap.
 
 ``status`` is one of:
 
@@ -6,13 +6,36 @@
 * ``partial``      a first, limited version (see ``note``)
 * ``planned``      not implemented yet; calling it raises :class:`NotImplementedYet`
 
-``area`` follows the plan's three thrusts: 만들기 (induce), 믿기 (trust), 고치기 (revalidate),
-plus the ledger itself and tooling. ``stage`` gives the plan stage and year.
+``area`` is the lifecycle phase (Generation, Evaluation, Revalidation) or the ledger and tooling, and ``stage`` is
+the roadmap stage and year. Both are stored with their Korean labels, which ``table('ko')`` and the Korean README
+use; ``area_en`` and ``stage_en`` give the English forms that ``table('en')`` uses.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Dict, List
+
+
+AREA_EN = {'장부': 'Ledger', '만들기': 'Generation', '믿기': 'Evaluation', '고치기': 'Revalidation', '도구': 'Tooling'}
+
+
+def _area_en(area: str) -> str:
+    """English area name from the Korean label, e.g. '만들기(2단계)' -> 'Generation (stage 2)'."""
+    base, _, rest = area.partition('(')
+    text = AREA_EN.get(base.strip(), base.strip())
+    return text + (' (stage 2)' if '2단계' in rest else '')
+
+
+def _stage_en(stage: str) -> str:
+    """English roadmap stage from the Korean label, e.g. '2단계 4-5차' -> 'Stage 2, years 4-5'."""
+    m = re.fullmatch(r'(\d)단계(?: (\d)(?:-(\d))?차)?', stage.strip())
+    if not m:
+        return stage
+    out = f'Stage {m.group(1)}'
+    if m.group(2):
+        out += f', year {m.group(2)}' if not m.group(3) else f', years {m.group(2)}-{m.group(3)}'
+    return out
 
 
 @dataclass(frozen=True)
@@ -25,6 +48,16 @@ class Feature:
     stage: str
     module: str
     note: str = ''
+
+    @property
+    def area_en(self) -> str:
+        """English name of the area (e.g. 'Generation (stage 2)')."""
+        return _area_en(self.area)
+
+    @property
+    def stage_en(self) -> str:
+        """English plan stage (e.g. 'Stage 2, year 4')."""
+        return _stage_en(self.stage)
 
 
 FEATURES: List[Feature] = [
@@ -86,7 +119,7 @@ def table(lang: str = 'ko') -> str:
     """Markdown table of all features (``lang`` 'ko' or 'en')."""
     if lang == 'en':
         rows = ['| Feature | Area | Status | Plan stage | Module |', '|---|---|---|---|---|']
-        rows += [f'| {f.name_en} | {f.area} | {f.status} | {f.stage} | `{f.module}` |' for f in FEATURES]
+        rows += [f'| {f.name_en} | {f.area_en} | {f.status} | {f.stage_en} | `{f.module}` |' for f in FEATURES]
     else:
         rows = ['| 기능 | 영역 | 상태 | 계획 단계 | 모듈 |', '|---|---|---|---|---|']
         rows += [f'| {f.name_ko} | {f.area} | {STATUS_KO[f.status]} | {f.stage} | `{f.module}` |' for f in FEATURES]

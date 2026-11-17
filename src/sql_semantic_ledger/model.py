@@ -1,6 +1,6 @@
 """Core data model: business definitions, evidence, evidence grades and the append-only ledger.
 
-The ledger ("장부") keeps every business definition together with the evidence behind it and an
+The ledger keeps every business definition together with the evidence behind it and an
 append-only event log, so that the trust in a definition is computed from evidence instead of a
 "verified" flag.
 

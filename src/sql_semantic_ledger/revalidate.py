@@ -1,4 +1,4 @@
-"""고치기 (revalidate): when definitions or data change, re-check the answers with the highest expected harm first.
+"""Revalidation: when definitions or data change, re-check the answers with the highest expected harm first.
 
 CONTRACT (implemented by the build step):
 
@@ -117,7 +117,7 @@ class PlanItem:
 
 
 class DependencyIndex:
-    """Which stored answers use which definitions and read which tables (the impact index of 고치기).
+    """Which stored answers use which definitions and read which tables (the impact index used for revalidation).
 
     Records are copied when added; adding an answer whose id is already indexed replaces the old record.
     """

@@ -21,7 +21,6 @@ def planned(feature_id: str) -> NoReturn:
         raise NotImplementedYet(f'{feature_id}: not implemented yet')
     if f.status == 'partial':
         raise NotImplementedYet(f'{f.name_en} [{f.id}] is only partly implemented in this release ({f.note}); the '
-                                f'missing part is planned for {f.stage} of the research plan '
-                                f'({f.name_ko}: 일부 구현).')
-    raise NotImplementedYet(f'{f.name_en} [{f.id}] is planned for {f.stage} of the research plan and is not '
-                            f'implemented in this release ({f.name_ko}: 미구현).')
+                                f'missing part is planned for {f.stage_en} of the research roadmap.')
+    raise NotImplementedYet(f'{f.name_en} [{f.id}] is planned for {f.stage_en} of the research roadmap and is not '
+                            f'implemented in this release.')

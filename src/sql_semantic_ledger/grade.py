@@ -1,4 +1,4 @@
-"""믿기 (trust): confirm, warn or reject an answer by the evidence grades of the definitions it uses.
+"""Evaluation (trust): confirm, warn or reject an answer by the evidence grades of the definitions it uses.
 
 Rule from the research plan: if every definition used is certified by a person (E3 or above) the answer
 is confirmed; if a definition backed only by machine evidence (E1-E2) is mixed in, the answer goes out

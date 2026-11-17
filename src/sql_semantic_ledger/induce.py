@@ -1,4 +1,4 @@
-"""만들기 (induce): business definitions from SQL usage histories and code.
+"""Generation (induce): business definitions from SQL usage histories and code.
 
 CONTRACT (implemented by the build step):
 

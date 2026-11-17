@@ -26,7 +26,7 @@ def test_every_stub_raises_with_its_feature(feature_id, call):
     with pytest.raises(NotImplementedYet) as caught:
         call()
     message = str(caught.value)
-    assert f'[{feature_id}]' in message and feature.name_en in message and feature.stage in message
+    assert f'[{feature_id}]' in message and feature.name_en in message and feature.stage_en in message
     assert isinstance(caught.value, NotImplementedError)
 
 

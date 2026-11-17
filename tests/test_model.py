@@ -71,7 +71,7 @@ def test_features_and_planned():
     try:
         planned('trust.agent_server')
     except NotImplementedYet as e:
-        assert 'stage' not in str(e) or '2단계' in str(e)
+        assert 'Stage 2' in str(e)
     else:
         raise AssertionError('planned() must raise')
 
