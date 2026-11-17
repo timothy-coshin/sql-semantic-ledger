@@ -14,9 +14,9 @@ business definitions of a SQL database (measures such as `SUM(orders.amount)`, f
 `orders.status = 'paid'`, joins, and metrics that pair an aggregate with the conditions it applies under) in an
 append-only ledger, together with the evidence behind each one. Definitions are induced from SQL usage histories
 and from SQL strings in service code, graded E0-E4 by that evidence (independent uses, data checks, a person's
-certification, counterexample checks), used to confirm, warn about or reject answers with an upper bound on their
-error rate, and ranked for revalidation when definitions or data change. Trust in a definition is computed from its
-evidence instead of being a "verified" flag.
+certification, counterexample checks), and used to confirm, warn about or reject answers with an upper bound on
+their error rate; when definitions or data change, the stored answers they affect are ranked for revalidation.
+Trust in a definition is computed from its evidence instead of being a "verified" flag.
 
 ## How it works
 
@@ -116,36 +116,38 @@ ledger features --lang en
 | `induce HISTORY [--dialect D] [--min-support 2] [--code-root DIR] [--no-metrics] -o LEDGER.json` | Induces definitions from a `.sql` history (statements separated by `;`) or a `.jsonl` file, plus the SQL found under `--code-root`. Merges into `LEDGER.json` if it exists. |
 | `scan-code ROOT [-o queries.jsonl] [--dialect D]` | Writes the SQL found in code as JSON lines `{"sql", "id", "kind": "code", "ref"}`, which `induce` reads back. |
 | `check LEDGER.json --db DB.sqlite` | Runs the data checks against a SQLite file (opened read-only) and records them as evidence. Refuses a database that holds none of the ledger's tables. |
-| `certify LEDGER.json ID --by NAME [--reject] [--note TEXT]` | Records a person's certification (E3) or rejection. |
+| `certify LEDGER.json ID --by NAME [--reject] [--note TEXT]` | Records a person's certification (E3) or rejection (E0). |
 | `show LEDGER.json [--min-grade E1] [--kind metric]` | Lists definitions, strongest evidence first. |
 | `decide LEDGER.json ID [ID ...] [--eps ...] [--delta P] [--target P]` | Confirms, warns about or rejects an answer that uses the given definitions; prints the error bound when `--eps` is given. |
 | `plan LEDGER.json --answers answers.jsonl [--changed ID ...] [--changed-table T ...] [--budget N] [--eps ...]` | Ranks the stored answers affected by the changes for revalidation. |
 
 Definitions can be named by id or by their unique name. `show`, `check`, `decide` and `plan` accept `--json`
-(UTF-8, non-ASCII text kept as is). `-v` logs progress to stderr. Exit codes: 0 success, 1 `check` found a failing
-check, 2 error (bad arguments, missing or invalid file, unknown definition). The CLI has no `revise` command yet;
-use `Ledger.revise` from Python.
+(UTF-8, non-ASCII text kept as is). `-v` adds the traceback of unexpected errors and log messages on stderr (for
+now only `induce` logs, a one-line summary); `-vv` adds debug details. Exit codes: 0 success, 1 `check` found a
+failing check, 2 error (bad arguments, missing or invalid file, unknown definition). The CLI has no `revise` command
+yet; use `Ledger.revise` from Python.
 
 ## Evidence grades and the answer rule
 
 | Grade | Evidence | Assigned by |
 |---|---|---|
-| E0 | none (for example proposed by a model), or falsified | fewer than two independent uses, or a failed data or counterexample check on the current version |
+| E0 | none (for example proposed by a model), or falsified (a failed check or a person's rejection) | fewer than two independent uses, a failed data or counterexample check on the current version, or a person's rejection (`Ledger.certify(..., passed=False)`, `ledger certify --reject`; the latest certification decision counts) |
 | E1 | the same-form definition is used by at least two different past queries or code sites | `induce` (re-running one query counts once; a history query and a code site are different sources) |
 | E2 | E1, and the data checks pass | `checks.run_checks`, `ledger check` |
 | E3 | certified by a person | `Ledger.certify`, `ledger certify` |
-| E4 | certified, and counterexample checks passed after certification | `checks.counterexample_checks` |
+| E4 | certified, and counterexample checks passed after certification (after a rejection, only checks after the new certification count) | `checks.counterexample_checks` |
 
-Grades are not stored; they are computed from the evidence about the current version of a definition.
+Grades are not part of the ledger's state: they are always computed from the evidence about the current version of
+a definition (`ledger.json` shows each grade at save time for reference only; a hand-edited grade is ignored).
 `grade.decide` turns the grades of the definitions an answer uses into a verdict:
 
 * **confirm** when every definition is certified (E3 or above, `Policy.confirm_min`);
 * **warn** when a definition backed only by machine evidence (E1-E2) is mixed in;
-* **reject** when a definition has no evidence (E0, including falsified ones), when no definition matches, or when a
-  definition is outside its validity period.
+* **reject** when a definition is E0 (no evidence, or falsified by a failed check or a person's rejection), when no
+  definition matches, or when a definition is outside its validity period.
 
 With per-grade error rates and `Policy(target=...)`, a confirmed answer whose error bound exceeds the target is
-downgraded to warn. Each verdict comes with one reason per definition (grade, who certified it and when, which past
+downgraded to warn. Each verdict comes with one reason per definition (grade, who certified or rejected it and when, which past
 queries or code sites support it, which check falsified it).
 
 ## Error bound

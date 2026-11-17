@@ -773,8 +773,10 @@ def _violations(violations: Iterable[str]) -> List[str]:
 def counterexample_checks(ledger: Ledger, conn: Any, definition_id: str, violations: Iterable[str]) -> List[CheckResult]:
     """Count the rows each violation predicate finds over the definition's tables; pass when there are none.
 
-    Each result is named by its predicate and recorded as Evidence(kind=COUNTEREXAMPLE). Raises KeyError for an
-    unknown id and ValueError (recording nothing) when a predicate is empty or cannot be evaluated.
+    Each result is named by its predicate and recorded as Evidence(kind=COUNTEREXAMPLE). A failed check falsifies
+    the current version whenever it runs; passed checks raise a certified definition to E4 only when they are
+    recorded after its certification (after a rejection, after the new certification). Raises KeyError for an unknown id and ValueError (recording
+    nothing) when a predicate is empty or cannot be evaluated.
     """
     d = ledger.get(definition_id)
     predicates = _violations(violations)

@@ -18,7 +18,7 @@ CONTRACT (implemented by the build step):
         ``reasons`` explain the verdict per definition (name, grade); ``grades`` maps id -> grade name.
 
 Reasons: one line per distinct definition, in the given order, naming its grade and its basis (who
-certified it and when, which past queries or code sites support it, which check falsified it), followed by
+certified or rejected it and when, which past queries or code sites support it, which check falsified it), followed by
 one line with the error bound and its terms when ``eps`` is given. A definition listed twice counts once.
 """
 from __future__ import annotations
@@ -162,8 +162,8 @@ def _basis(d: Definition) -> str:
     if d.certified and cert is not None:
         parts.append(f'certified by {cert.ref or "an unnamed reviewer"} at {cert.at}')
         if d.grade == Grade.E4:
-            n = len(d.current_evidence(EvidenceKind.COUNTEREXAMPLE))
-            parts.append(f'passed {n} counterexample check{"" if n == 1 else "s"}')
+            n = len(d.counterexamples_after_certification())
+            parts.append(f'passed {n} counterexample check{"" if n == 1 else "s"} after certification')
     else:
         parts.append('machine evidence only')
         if cert is not None:

@@ -76,6 +76,39 @@ def test_features_and_planned():
         raise AssertionError('planned() must raise')
 
 
+def test_e4_counts_counterexample_checks_after_certification():
+    d = _metric()
+    d.evidence += [Evidence(EvidenceKind.HISTORY, ref='q1'), Evidence(EvidenceKind.HISTORY, ref='q2'),
+                   Evidence(EvidenceKind.COUNTEREXAMPLE, ref='orders.amount < 0', at='2026-10-01T09:00:00+00:00'),
+                   Evidence(EvidenceKind.CERTIFICATION, ref='analyst', at='2026-10-02T09:00:00+00:00')]
+    assert d.grade == Grade.E3 and d.counterexamples_after_certification() == []   # checked before certification
+    d.evidence.append(Evidence(EvidenceKind.COUNTEREXAMPLE, ref='orders.amount IS NULL', at='2026-10-03T09:00:00+00:00'))
+    assert d.grade == Grade.E4
+    d.evidence.append(Evidence(EvidenceKind.CERTIFICATION, ref='lead', at='2026-10-04T09:00:00+00:00'))
+    assert d.grade == Grade.E4                     # another reviewer's certification keeps the checks
+    d.evidence.append(Evidence(EvidenceKind.CERTIFICATION, ref='auditor', passed=False, at='2026-10-05T09:00:00+00:00'))
+    assert d.grade == Grade.E0 and d.counterexamples_after_certification() == []
+    d.evidence.append(Evidence(EvidenceKind.CERTIFICATION, ref='lead', at='2026-10-06T09:00:00+00:00'))
+    assert d.grade == Grade.E3                     # after a rejection, only checks after the new certification count
+    d.evidence.append(Evidence(EvidenceKind.COUNTEREXAMPLE, ref='orders.amount > 1e9', at='2026-10-07T09:00:00+00:00'))
+    assert d.grade == Grade.E4
+    assert [e.ref for e in d.counterexamples_after_certification()] == ['orders.amount > 1e9']
+    d.evidence.append(Evidence(EvidenceKind.COUNTEREXAMPLE, ref='orders.amount = 0', passed=False,
+                               at='2026-09-01T00:00:00+00:00'))
+    assert d.falsified and d.grade == Grade.E0     # a failed check falsifies whenever it ran
+
+
+def test_e4_same_second_evidence_keeps_recording_order():
+    t = '2026-10-01T09:00:00+00:00'
+    before = _metric()
+    before.evidence += [Evidence(EvidenceKind.COUNTEREXAMPLE, ref='orders.amount < 0', at=t),
+                        Evidence(EvidenceKind.CERTIFICATION, ref='analyst', at=t)]
+    after = _metric()
+    after.evidence += [Evidence(EvidenceKind.CERTIFICATION, ref='analyst', at=t),
+                       Evidence(EvidenceKind.COUNTEREXAMPLE, ref='orders.amount < 0', at=t)]
+    assert before.grade == Grade.E3 and after.grade == Grade.E4
+
+
 def test_rejection_falsifies_and_recertification_restores():
     from sql_semantic_ledger.grade import Verdict, decide
     led = Ledger()

@@ -2,9 +2,9 @@
 
 CONTRACT (implemented by the build step):
 
-    load_history(path) -> list[QueryRecord]
-        '.sql': statements separated by ';' (ids q1, q2, ...); '.jsonl': one object per line with
-        keys sql (required), id, user, at.
+    load_history(path, dialect=None) -> list[QueryRecord]
+        '.sql': statements separated by ';', split with the dialect's tokenizer (ids q1, q2, ...);
+        '.jsonl': one object per line with keys sql (required), id, user, at.
     induce(records, dialect=None, min_support=2, ledger=None, metrics=True, keep_unsupported=False) -> Ledger
         The plan's steps: (1) SQL normalization, (2) candidate generation, (3) independent-support check,
         (5) grade assignment. Step (4), falsification against data, is checks.run_checks.
@@ -14,7 +14,8 @@ CONTRACT (implemented by the build step):
         Support: each record that yields a candidate adds Evidence(kind=record.kind, ref=record.ref or id).
         Two records count as different only if their skeletons differ or their refs differ.
         Candidates with support < min_support are dropped unless keep_unsupported (then they stay E0).
-        Grades are not stored; they follow from the evidence (see model.Definition.grade).
+        Grades are not part of a definition's state (ledger.json keeps a snapshot for reference only); they
+        follow from the evidence (see model.Definition.grade).
         Names: readable snake_case built from the fragment, e.g. 'sum_orders_amount',
         'orders_status_eq_paid', 'join_customers_orders', 'sum_orders_amount_where_orders_status_eq_paid'.
 
@@ -46,8 +47,8 @@ How candidates become definitions
 * Identity: ``Definition.id`` is :func:`model.make_id` of (kind, expression, conditions); for an expression
   that reads no column, such as COUNT(*), the tables are added to the key so that COUNT(*) over orders and
   COUNT(*) over customers stay different definitions.
-* (5) Grades are not stored. A new candidate is added when its support reaches ``min_support`` (or always,
-  with ``keep_unsupported``). Evidence for a definition that is already in ``ledger`` is always merged, so
+* (5) Grades are computed, not stored as state. A new candidate is added when its support reaches
+  ``min_support`` (or always, with ``keep_unsupported``). Evidence for a definition that is already in ``ledger`` is always merged, so
   support accumulates over several calls; it is attached to the current version, and skipped when that
   version's expression or conditions differ (the definition was revised) or when its group (record kind,
   skeleton, record ref) already supports that version.
@@ -105,17 +106,21 @@ class QueryRecord:
 
 
 # ---------------------------------------------------------------------------------------------- loading
-def load_history(path: Union[str, Path]) -> List[QueryRecord]:
+def load_history(path: Union[str, Path], dialect: Optional[str] = None) -> List[QueryRecord]:
     """Read a usage history: ``.sql`` (statements separated by ``;``) or ``.jsonl`` (one object per line).
 
-    ``.sql`` statements get ids q1, q2, ... in file order. A ``.jsonl`` object needs ``sql`` and may have
-    ``id`` (default q<n>), ``user``, ``at``, ``kind`` ('history' or 'code') and ``ref``. Raises ValueError for
-    another file type or a malformed jsonl line (the message names the line).
+    ``.sql`` statements get ids q1, q2, ... in file order; ``dialect`` (a sqlglot dialect name) is used only to
+    split ``.sql`` text, so that for example a ``;`` inside a MySQL ``#`` comment does not split. A ``.jsonl``
+    object needs ``sql`` and may have ``id`` (default q<n>), ``user``, ``at``, ``kind`` ('history' or 'code') and
+    ``ref``. Raises ValueError for an unknown dialect, another file type or a malformed jsonl line (the message
+    names the line).
     """
+    if dialect is not None:
+        Dialect.get_or_raise(dialect)          # an unknown dialect is an error for every file type
     file = Path(path)
     suffix = file.suffix.lower()
     if suffix == '.sql':
-        statements = split_statements(file.read_text(encoding='utf-8-sig'))
+        statements = split_statements(file.read_text(encoding='utf-8-sig'), dialect)
         return [QueryRecord(sql=sql, id=f'q{i}') for i, sql in enumerate(statements, start=1)]
     if suffix == '.jsonl':
         return _load_jsonl(file)

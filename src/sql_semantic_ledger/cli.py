@@ -16,7 +16,8 @@ Behaviour
 * Exit codes: 0 success; 1 the command ran and found a problem (``check``: at least one check failed, so
   definitions were falsified); 2 an error (bad arguments, a missing or invalid file, an unknown definition,
   a planned feature, ...). An error is one line ``ledger: error: ...`` on stderr; ``-v`` adds the traceback
-  of unexpected errors. ``-v`` also logs progress (INFO) and ``-vv`` debug details to stderr.
+  of unexpected errors. ``-v`` also shows INFO log messages (for now the ``induce`` summary) and ``-vv`` debug
+  details on stderr.
 * Definitions are named by id or, when the name is unique, by name (case-insensitive).
 * ``features`` prints :func:`features.table` (``--lang en`` by default, or ``ko``).
 * ``induce`` reads HISTORY with :func:`induce.load_history` (``.sql`` or ``.jsonl``, so the output of
@@ -94,14 +95,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog='ledger',
         description='LEDGER: business definitions induced from SQL usage and service code, graded by evidence '
-                    '(E0-E4), used to confirm, warn about or reject answers, and revalidated selectively.',
+                    '(E0-E4) and used to confirm, warn about or reject answers; the stored answers a change '
+                    'affects are ranked for revalidation.',
         epilog='Exit codes: 0 success, 1 a check failed (check), 2 error.')
     parser.add_argument('--version', action='version', version=f'%(prog)s (sql-semantic-ledger) {__version__}')
     parser.add_argument('-v', '--verbose', action='count', default=0,
-                        help='log progress to stderr (-vv for debug details)')
+                        help='tracebacks of unexpected errors and log messages on stderr (-vv: debug details)')
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument('-v', '--verbose', action='count', default=argparse.SUPPRESS,
-                        help='log progress to stderr (-vv for debug details)')
+                        help='tracebacks of unexpected errors and log messages on stderr (-vv: debug details)')
     commands = parser.add_subparsers(dest='command', metavar='COMMAND', required=True)
 
     p = commands.add_parser('features', parents=[common], help='list implemented, partial and planned features',
@@ -114,7 +116,7 @@ def build_parser() -> argparse.ArgumentParser:
                                         'history and, optionally, from SQL found in service code.')
     p.add_argument('history', metavar='HISTORY', help="usage history: .sql (statements separated by ';') or .jsonl")
     p.add_argument('--dialect', type=_dialect_arg, default=None,
-                   help='sqlglot dialect of the SQL (default: sqlglot generic SQL)')
+                   help='sqlglot dialect of the SQL, also used to split a .sql history (default: sqlglot generic SQL)')
     p.add_argument('--min-support', type=_positive_int, default=2, metavar='N',
                    help='independent queries or code sites a new definition needs (default: 2, which gives E1)')
     p.add_argument('--code-root', metavar='DIR', default=None, help='also scan SQL strings in the code under DIR')
@@ -139,7 +141,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument('--json', action='store_true', help='print the results as JSON')
     p.set_defaults(handler=_cmd_check)
 
-    p = commands.add_parser('certify', parents=[common], help="record a person's certification (E3) or rejection",
+    p = commands.add_parser('certify', parents=[common], help="record a person's certification (E3) or rejection (E0)",
                             description="Record a person's decision about a definition.")
     p.add_argument('ledger', metavar='LEDGER.json')
     p.add_argument('id', metavar='ID', help='definition id (or unique name)')
@@ -199,7 +201,7 @@ def _cmd_induce(args: argparse.Namespace) -> int:
     from .induce import induce, load_history
 
     history_path = _existing_file(args.history, 'history file')
-    records = load_history(history_path)
+    records = load_history(history_path, dialect=args.dialect)
     code_records: List[Any] = []
     if args.code_root is not None:
         from .code_sources import scan_repository

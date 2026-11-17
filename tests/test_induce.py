@@ -281,6 +281,20 @@ def test_load_history_sql(tmp_path):
     assert [r.sql for r in load_history(bom)] == ['SELECT 1', 'SELECT 2']
 
 
+def test_load_history_sql_splits_with_the_dialect(tmp_path):
+    path = tmp_path / 'h.sql'
+    path.write_text("# q1: paid orders; checked by hand\nSELECT COUNT(*) FROM orders WHERE status = 'paid';\n"
+                    "# q2: refunds; checked\nSELECT SUM(amount) FROM orders WHERE status = 'refunded';\n", encoding='utf-8')
+    records = load_history(path, dialect='mysql')          # '#' starts a comment in MySQL, so its ';' does not split
+    assert [r.id for r in records] == ['q1', 'q2']
+    assert records[0].sql.endswith("status = 'paid'") and records[1].sql.endswith("status = 'refunded'")
+    jsonl = tmp_path / 'h.jsonl'
+    jsonl.write_text('{"sql": "SELECT 1"}\n', encoding='utf-8')
+    for history in (path, jsonl):
+        with pytest.raises(ValueError, match='nknown dialect'):
+            load_history(history, dialect='no_such_dialect')
+
+
 def test_load_history_jsonl_and_induce(tmp_path):
     path = tmp_path / 'history.jsonl'
     rows = [{'sql': PAID_REVENUE, 'id': 17, 'user': 'analyst_a', 'at': '2024-05-01T10:00:00'}, None,

@@ -1,4 +1,4 @@
-# sql-semantic-ledger
+# Lifecycle of Evidence-graded Definitions: Generation, Evaluation, Revalidation (LEDGER)
 
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE) ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg) ![Status: pre-alpha](https://img.shields.io/badge/status-pre--alpha-orange.svg)
 
@@ -114,36 +114,38 @@ ledger features --lang ko
 | `induce HISTORY [--dialect D] [--min-support 2] [--code-root DIR] [--no-metrics] -o LEDGER.json` | `.sql` 이력(`;`로 구분한 문장)이나 `.jsonl` 파일, 그리고 `--code-root` 아래에서 찾은 SQL로 정의를 귀납합니다. `LEDGER.json`이 있으면 그 장부에 합칩니다. |
 | `scan-code ROOT [-o queries.jsonl] [--dialect D]` | 코드에서 찾은 SQL을 JSON 줄 `{"sql", "id", "kind": "code", "ref"}`로 씁니다. `induce`가 이 파일을 다시 읽습니다. |
 | `check LEDGER.json --db DB.sqlite` | SQLite 파일(읽기 전용으로 엶)에 데이터 검사를 실행하고 증거로 기록합니다. 장부의 테이블이 하나도 없는 데이터베이스는 거부합니다. |
-| `certify LEDGER.json ID --by NAME [--reject] [--note TEXT]` | 사람의 인증(E3)이나 거절을 기록합니다. |
+| `certify LEDGER.json ID --by NAME [--reject] [--note TEXT]` | 사람의 인증(E3)이나 거절(E0)을 기록합니다. |
 | `show LEDGER.json [--min-grade E1] [--kind metric]` | 정의를 증거가 강한 순으로 보여 줍니다. |
 | `decide LEDGER.json ID [ID ...] [--eps ...] [--delta P] [--target P]` | 주어진 정의를 쓰는 답변을 확정·경고·거부하고, `--eps`가 있으면 오답률 상한을 출력합니다. |
 | `plan LEDGER.json --answers answers.jsonl [--changed ID ...] [--changed-table T ...] [--budget N] [--eps ...]` | 변경의 영향을 받는 저장된 답변을 재검증 순서로 늘어놓습니다. |
 
 정의는 id 또는 겹치지 않는 이름으로 지정할 수 있습니다. `show`, `check`, `decide`, `plan`은 `--json`을 받습니다(UTF-8,
-한글 등 비ASCII 문자를 그대로 유지). `-v`는 진행 상황을 표준 오류로 기록합니다. 종료 코드는 0 성공, 1 `check`에서
-실패한 검사가 있음, 2 오류(잘못된 인자, 없거나 잘못된 파일, 모르는 정의)입니다. 명령줄 도구에는 아직 `revise` 명령이
-없으므로 개정은 Python의 `Ledger.revise`로 합니다.
+한글 등 비ASCII 문자를 그대로 유지). `-v`를 주면 예상하지 못한 오류의 traceback을 함께 보여 주고, 로그 메시지도 표준 오류로
+출력합니다(지금은 `induce`만 요약 한 줄을 남깁니다). `-vv`는 디버그 정보를 더합니다. 종료 코드는 0 성공, 1 `check`에서 실패한 검사가 있음,
+2 오류(잘못된 인자, 없거나 잘못된 파일, 모르는 정의)입니다. 명령줄 도구에는 아직 `revise` 명령이 없으므로 개정은
+Python의 `Ledger.revise`로 합니다.
 
 ## 증거 등급과 답변 규칙
 
 | 등급 | 증거 | 부여하는 곳 |
 |---|---|---|
-| E0 | 증거 없음(예: 모델의 제안) 또는 반증됨 | 독립적인 사용이 두 곳 미만이거나, 현재 버전의 데이터 검사·반례 검사가 실패함 |
+| E0 | 증거 없음(예: 모델의 제안) 또는 반증됨(검사 실패나 사람의 거절) | 독립적인 사용이 두 곳 미만이거나, 현재 버전의 데이터 검사·반례 검사가 실패했거나, 사람이 거절함(`Ledger.certify(..., passed=False)`, `ledger certify --reject`, 가장 최근의 인증 결정을 따름) |
 | E1 | 같은 형태의 정의가 서로 다른 과거 질의나 코드 위치 두 곳 이상에서 쓰임 | `induce`(같은 질의를 다시 실행한 것은 한 번으로 셈, 이력 질의와 코드 위치는 서로 다른 출처) |
 | E2 | E1이면서 데이터 검사를 통과함 | `checks.run_checks`, `ledger check` |
 | E3 | 사람이 인증함 | `Ledger.certify`, `ledger certify` |
-| E4 | 인증 뒤 반례 검사도 통과함 | `checks.counterexample_checks` |
+| E4 | 인증 뒤 반례 검사도 통과함(거절된 적이 있으면 다시 인증한 뒤의 검사만 셈) | `checks.counterexample_checks` |
 
-등급은 저장하지 않고 정의의 현재 버전에 대한 증거로부터 그때그때 계산합니다. `grade.decide`는 답변에 쓰인 정의들의
-등급을 판정으로 바꿉니다.
+등급은 장부의 상태로 저장하지 않고, 언제나 정의의 현재 버전에 대한 증거로부터 계산합니다(`ledger.json`에는 저장 시점의
+등급이 참고용으로 함께 적히며, 손으로 고친 등급은 무시됩니다). `grade.decide`는 답변에 쓰인 정의들의 등급을 판정으로
+바꿉니다.
 
 * **확정(confirm)**: 모든 정의가 사람의 인증을 받았을 때(E3 이상, `Policy.confirm_min`)
 * **경고(warn)**: 기계 증거(E1–E2)에만 기대는 정의가 섞였을 때
-* **거부(reject)**: 증거가 없는 정의(반증된 정의를 포함한 E0)가 섞였거나, 맞는 정의가 없거나, 유효기간을 벗어난 정의가
-  있을 때
+* **거부(reject)**: E0인 정의(증거가 없거나, 검사 실패나 사람의 거절로 반증된 정의)가 섞였거나, 맞는 정의가 없거나,
+  유효기간을 벗어난 정의가 있을 때
 
 등급별 오류율과 `Policy(target=...)`를 주면, 확정 답변이라도 오답률 상한이 목표를 넘으면 경고로 낮춥니다. 판정마다
-정의별 근거(등급, 누가 언제 인증했는지, 어떤 과거 질의나 코드 위치가 지지하는지, 어떤 검사가 반증했는지)가 함께 나옵니다.
+정의별 근거(등급, 누가 언제 인증하거나 거절했는지, 어떤 과거 질의나 코드 위치가 지지하는지, 어떤 검사가 반증했는지)가 함께 나옵니다.
 
 ## 오답률 상한
 
@@ -170,7 +172,7 @@ $$P(\text{the answer to } q \text{ is wrong}) \le \min\Big(1,\ \delta + \sum_{d 
 |---|---|---|---|---|
 | 업무 정의·증거·인증 기록을 남기는 추가 전용 장부 | 장부 | 구현 | 1단계 | `model` |
 | SQL 정규화와 정의 후보 생성(집계·조건·조인·지표) | 만들기 | 구현 | 1단계 1차 | `parse, induce` |
-| 서로 다른 질의 2개 이상의 지지 검사(E1) | 만들기 | 구현 | 1단계 1차 | `induce` |
+| 서로 다른 질의나 코드 위치 2곳 이상의 지지 검사(E1) | 만들기 | 구현 | 1단계 1차 | `induce` |
 | 실제 데이터에 의한 반증 검사(E2) | 만들기 | 구현 | 1단계 1-2차 | `checks` |
 | 인증 뒤 반례 검사(E4) | 믿기 | 일부 구현 | 1단계 2-3차 | `checks` |
 | 서비스 코드 속 SQL 문자열에서 정의 귀납 | 만들기(2단계) | 구현 | 2단계 4차 | `code_sources` |
@@ -178,11 +180,11 @@ $$P(\text{the answer to } q \text{ is wrong}) \le \min\Big(1,\ \delta + \sum_{d 
 | 화면 자바스크립트 계산 로직을 정의로 끌어올리는 정적 분석 | 만들기(2단계) | 미구현(계획) | 2단계 4차 | `code_sources` |
 | 지표 저장소(YAML) 정의 읽기와 출처·제품 간 정의 충돌 탐지 | 만들기(2단계) | 일부 구현 | 2단계 4차 | `multisource` |
 | 증거 등급에 따른 답변의 확정·경고·거부 | 믿기 | 구현 | 1단계 2차 | `grade` |
-| 확정 답변의 오답률 상한 P <= delta + sum eps(e(d)) | 믿기 | 구현 | 1단계 2-3차 | `bound` |
+| 답변의 오답률 상한 P <= min(1, delta + sum eps(e(d))) | 믿기 | 구현 | 1단계 2-3차 | `bound` |
 | 등급별 오류율의 유한 표본 신뢰상한 추정 | 믿기 | 구현 | 1단계 3차 | `bound` |
 | 다단계 분석의 오답률 상한 합성 | 믿기(2단계) | 구현 | 2단계 5차 | `bound` |
 | 확정 결론 오답률의 통계적 보장(확정 기준 보정) | 믿기(2단계) | 미구현(계획) | 2단계 5차 | `bound` |
-| 장부 정의로 SQL을 규칙 조립 | 믿기 | 일부 구현 | 1단계 2차 | `engine` |
+| 장부 정의로 SQL을 규칙에 따라 조립 | 믿기 | 일부 구현 | 1단계 2차 | `engine` |
 | 자연어 질문에 맞는 장부 정의 고르기(모델) | 믿기 | 미구현(계획) | 1단계 2차 | `engine, propose` |
 | 데이터 에이전트용 장부 서버(MCP) | 믿기(2단계) | 미구현(계획) | 2단계 4-5차 | `agent_server` |
 | 정의·데이터 변경의 영향 범위 계산 | 고치기 | 구현 | 1단계 3차 | `revalidate` |

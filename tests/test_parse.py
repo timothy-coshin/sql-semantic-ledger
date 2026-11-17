@@ -28,6 +28,9 @@ def test_split_respects_strings_identifiers_and_comments():
 def test_split_uses_the_dialect_tokenizer():
     assert split_statements('SELECT $$a;b$$; SELECT 2', dialect='postgres') == ['SELECT $$a;b$$', 'SELECT 2']
     assert split_statements('SELECT 1; # note; more\nSELECT 2', dialect='mysql') == ['SELECT 1', '# note; more\nSELECT 2']
+    # text the tokenizer rejects (an unterminated string) still honours the dialect's line comments
+    assert split_statements("SELECT 1; # note; more\nSELECT 2; SELECT 'x", dialect='mysql') == \
+        ['SELECT 1', '# note; more\nSELECT 2', "SELECT 'x"]
 
 
 def test_split_empty_text_and_unterminated_string():

@@ -168,6 +168,15 @@ def test_induce_options(tmp_path, capsys):
     assert code == 0 and led and all(d.sources == ['history'] for d in led)
 
 
+def test_induce_splits_a_history_with_the_dialect(tmp_path, capsys):
+    history = tmp_path / 'h.sql'
+    history.write_text("# q1: paid; checked\nSELECT SUM(amount) FROM orders WHERE status = 'paid';\n"
+                       "# q2: paid again; checked\nSELECT SUM(amount) FROM orders WHERE status = 'paid' AND amount > 0;\n",
+                       encoding='utf-8')
+    code, out, _ = run(capsys, 'induce', history, '--dialect', 'mysql', '-o', tmp_path / 'l.json')
+    assert code == 0 and 'read 2 queries' in out
+
+
 def test_verbose_logs_to_stderr_and_cleans_up(tmp_path, capsys):
     logger = logging.getLogger('sql_semantic_ledger')
     handlers, level = list(logger.handlers), logger.level

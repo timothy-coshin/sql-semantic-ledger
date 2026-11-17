@@ -13,7 +13,8 @@ Evidence grades (from the research plan):
     E4  certified, and passed counterexample checks after certification
 
 A failed data check or counterexample, or a person's rejection (the latest certification decision is
-negative), falsifies the current version (grade E0, ``falsified``).
+negative), falsifies the current version (grade E0, ``falsified``). Only counterexample checks recorded after
+certification count toward E4; after a rejection, only those recorded after the new certification.
 Revising a definition starts a new version; evidence gathered for older versions no longer counts.
 """
 from __future__ import annotations
@@ -79,7 +80,7 @@ class EvidenceKind(str, Enum):
     CODE = 'code'                      # service code that implements it (API SQL/ORM, UI JavaScript, ...)
     DATA_CHECK = 'data_check'          # a check run against the database
     CERTIFICATION = 'certification'    # a person's decision
-    COUNTEREXAMPLE = 'counterexample'  # a counterexample check after certification
+    COUNTEREXAMPLE = 'counterexample'  # a counterexample check (counts toward E4 when recorded after certification)
 
 
 @dataclass
@@ -172,13 +173,31 @@ class Definition:
         certs = sorted(self.current_evidence(EvidenceKind.CERTIFICATION), key=lambda e: e.at)
         return bool(certs) and certs[-1].passed
 
+    def counterexamples_after_certification(self) -> List[Evidence]:
+        """Counterexample checks on the current version recorded after it was certified.
+
+        Empty when there is no certification decision or the latest one is a rejection. Checks count from the
+        first positive decision after the last rejection (or from the first certification), so another
+        reviewer's certification keeps them. Evidence recorded in the same second keeps its recording order.
+        """
+        ordered = sorted(self.current_evidence(), key=lambda e: e.at)   # stable sort: ties keep recording order
+        decisions = [i for i, e in enumerate(ordered) if e.kind == EvidenceKind.CERTIFICATION]
+        if not decisions or not ordered[decisions[-1]].passed:
+            return []
+        start = decisions[-1]
+        for i in reversed(decisions):
+            if not ordered[i].passed:
+                break
+            start = i
+        return [e for e in ordered[start + 1:] if e.kind == EvidenceKind.COUNTEREXAMPLE]
+
     @property
     def grade(self) -> Grade:
         """Evidence grade computed from the current version's evidence (see module docstring)."""
         if self.falsified:
             return Grade.E0
         if self.certified:
-            ce = self.current_evidence(EvidenceKind.COUNTEREXAMPLE)
+            ce = self.counterexamples_after_certification()
             return Grade.E4 if ce and all(e.passed for e in ce) else Grade.E3
         if self.support >= 2:
             checks = self.current_evidence(EvidenceKind.DATA_CHECK)

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "sql-semantic-ledger"
 version = "0.1.0a1"
-description = "A certified, evolving semantic layer: business definitions induced from SQL usage histories and service code, graded by evidence, and selectively revalidated (reference implementation of LEDGER)."
+description = "A certified, evolving semantic layer: business definitions induced from SQL usage histories and service code, graded by evidence and used to confirm, warn about or reject answers; the stored answers a change affects are ranked for revalidation (reference implementation of LEDGER)."
 readme = "README.md"
 requires-python = ">=3.9"
 license = "Apache-2.0"

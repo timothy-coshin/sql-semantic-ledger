@@ -153,7 +153,8 @@ def split_statements(text: str, dialect: Optional[str] = None) -> List[str]:
     Semicolons inside string literals, quoted identifiers and comments do not split. Each statement is
     returned stripped and without its semicolon; empty statements and statements that contain only comments
     are dropped. Text that the dialect's tokenizer rejects (e.g. an unterminated string) is split by a simple
-    quote- and comment-aware scanner instead. Raises ValueError for an unknown dialect.
+    quote- and comment-aware scanner instead (it knows the dialect's line comments, e.g. ``#`` in MySQL).
+    Raises ValueError for an unknown dialect.
     """
     tokenizer = Dialect.get_or_raise(dialect)
     if not text or not text.strip():
@@ -161,7 +162,7 @@ def split_statements(text: str, dialect: Optional[str] = None) -> List[str]:
     try:
         tokens = tokenizer.tokenize(text)
     except Exception:  # noqa: BLE001 - any tokenizer failure falls back to the plain scanner
-        return _split_plain(text)
+        return _split_plain(text, _line_comment_markers(tokenizer))
     pieces: List[str] = []
     start, has_tokens = 0, False
     for token in tokens:
@@ -242,7 +243,13 @@ def _parse_single_query(sql: Any, dialect: Optional[str]) -> Optional[exp.Expres
     return root if isinstance(root, (exp.Select,) + _SET_OPERATIONS) else None
 
 
-def _split_plain(text: str) -> List[str]:
+def _line_comment_markers(dialect: Dialect) -> Tuple[str, ...]:
+    """Line-comment markers of the dialect's tokenizer, e.g. ('--', '#') for MySQL."""
+    markers = tuple(m for m in getattr(dialect.tokenizer_class, 'COMMENTS', ()) if isinstance(m, str))
+    return markers or ('--',)
+
+
+def _split_plain(text: str, line_comments: Tuple[str, ...] = ('--',)) -> List[str]:
     """Split on ``;`` outside quotes and comments (fallback for text the tokenizer rejects)."""
     pieces: List[str] = []
     buffer: List[str] = []
@@ -250,7 +257,7 @@ def _split_plain(text: str) -> List[str]:
     i, n = 0, len(text)
     while i < n:
         ch, nxt = text[i], text[i + 1:i + 2]
-        if ch == '-' and nxt == '-':
+        if any(text.startswith(marker, i) for marker in line_comments):
             end = text.find('\n', i)
             end = n if end < 0 else end
         elif ch == '/' and nxt == '*':
