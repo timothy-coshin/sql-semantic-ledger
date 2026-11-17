@@ -1,0 +1,34 @@
+# Toy shop: metric store shared by two products (fictional).
+# Read with multisource.load_metric_yaml (needs PyYAML: pip install "sql-semantic-ledger[yaml]").
+# Both products define paid_revenue, but only web_shop excludes test orders: a definition conflict.
+# active_customers is the same in both products (written differently), so it is not a conflict.
+products:
+  web_shop:
+    metrics:
+      - name: paid_revenue
+        description: Revenue from paid orders; test orders are excluded.
+        expression: SUM(orders.amount)
+        filters:
+          - orders.status = 'paid'
+          - orders.is_test = 0
+        tables: [orders]
+      - name: active_customers
+        description: Customers with at least one paid order.
+        expression: COUNT(DISTINCT orders.customer_id)
+        filters: ["orders.status = 'paid' AND orders.is_test = 0"]
+        tables: [orders]
+  mobile_app:
+    metrics:
+      - name: paid_revenue
+        description: Revenue from paid orders.
+        expression: SUM(orders.amount)
+        filters:
+          - orders.status = 'paid'
+        tables: [orders]
+      - name: active-customers
+        description: Customers with a paid order (test orders excluded).
+        expression: count(distinct orders.customer_id)
+        filters:
+          - orders.is_test = 0
+          - orders.status = 'paid'
+        tables: [orders]

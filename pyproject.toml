@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sql-semantic-ledger"
+version = "0.1.0a1"
+description = "A certified, evolving semantic layer: business definitions induced from SQL usage histories and service code, graded by evidence, and selectively revalidated (reference implementation of LEDGER)."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Wooyoung Kim", email = "timothy@yonsei.ac.kr" }]
+keywords = ["sql", "semantic layer", "ontology", "text-to-sql", "data governance", "business definitions", "ledger", "data agents"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Database",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+# Definition ids and canonical SQL come from sqlglot's parse trees and SQL output, so the range is the tested
+# one: 30.8 added the NOT LIKE form that parse relies on; a new major version may change ids.
+dependencies = ["sqlglot>=30.8,<31"]
+
+[project.optional-dependencies]
+yaml = ["PyYAML>=6"]
+dev = ["pytest>=7", "PyYAML>=6"]
+
+[project.scripts]
+ledger = "sql_semantic_ledger.cli:main"
+
+# Code URL slot: uncomment and fill in when the repository is public (also replace <repository URL> in the
+# install and citation sections of README.md and README.ko.md).
+# [project.urls]
+# Repository = "<repository URL>"
+# Issues = "<repository URL>/issues"
+# Changelog = "<repository URL>/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sql_semantic_ledger"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "examples", "README.md", "README.ko.md", "LICENSE", "CHANGELOG.md", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

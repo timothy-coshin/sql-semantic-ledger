@@ -1,0 +1,6 @@
+{"id": "a1", "question": "Paid revenue so far", "definitions": ["ae289fba8e7e"], "tables": ["orders"], "weight": 5}
+{"id": "a2", "question": "Paid revenue by region", "definitions": ["ae289fba8e7e", "ae34743fa438"], "tables": ["orders", "customers"], "group_by": ["customers.region"], "weight": 3}
+{"id": "a3", "question": "Active customers by region", "definitions": ["8441de06d207", "ae34743fa438"], "tables": ["orders", "customers"], "group_by": ["customers.region"], "weight": 2}
+{"id": "a4", "question": "Average order value", "definitions": ["1c0cb6c38537"], "tables": ["orders"], "weight": 2}
+{"id": "a5", "question": "Refunded amount by region", "definitions": ["c90b3c393a07", "ae34743fa438"], "tables": ["orders", "customers"], "group_by": ["customers.region"], "weight": 1}
+{"id": "a6", "question": "Revenue on the old dashboard", "definitions": ["43962c5fc6f6"], "tables": ["orders"], "weight": 1}
