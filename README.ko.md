@@ -1,5 +1,7 @@
 # sql-semantic-ledger
 
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE) ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg) ![Status: pre-alpha](https://img.shields.io/badge/status-pre--alpha-orange.svg)
+
 [English](README.md) | [한국어](README.ko.md)
 
 > **상태: 프리알파 연구 미리보기(0.1.0a1).** 구현된 기능은 테스트를 거쳤지만 API는 아직 바뀔 수 있습니다.
@@ -31,10 +33,10 @@
 아직 PyPI에 올리지 않았으므로 저장소나 소스 체크아웃에서 설치합니다.
 
 ```bash
-pip install "sql-semantic-ledger @ git+<repository URL>"          # 핵심 기능(의존성은 sqlglot 하나)
-pip install "sql-semantic-ledger[yaml] @ git+<repository URL>"    # + PyYAML: 지표 저장소 YAML 파일 읽기
+pip install "sql-semantic-ledger @ git+https://github.com/timothy-coshin/sql-semantic-ledger.git"          # 핵심 기능(의존성은 sqlglot 하나)
+pip install "sql-semantic-ledger[yaml] @ git+https://github.com/timothy-coshin/sql-semantic-ledger.git"    # + PyYAML: 지표 저장소 YAML 파일 읽기
 
-git clone <repository URL> sql-semantic-ledger && cd sql-semantic-ledger
+git clone https://github.com/timothy-coshin/sql-semantic-ledger.git && cd sql-semantic-ledger
 pip install -e ".[dev]"                                           # + pytest: 테스트 실행
 ```
 
@@ -153,7 +155,9 @@ $$P(\text{the answer to } q \text{ is wrong}) \le \min\Big(1,\ \delta + \sum_{d 
 맞는데도 답변이 틀릴 확률(맞지 않는 정의를 골랐거나 SQL을 잘못 조립한 경우)입니다. `bound.error_bound`가 이 값을
 계산하며, `eps`에 없는 등급은 1로 셈해 상한이 여전히 성립하게 합니다. `bound.estimate_eps`는 등급별로 판정한 표본
 `(errors, n)`에서 단측 신뢰상한(정확한 Clopper-Pearson 또는 Wilson)을 구하고, `bound.compose`는 다단계 분석의 단계별
-상한을 더합니다(합집합 상한). 상한은 넣은 오류율만큼만 믿을 수 있습니다. 예제의 오류율은 측정값이 아니라 예시입니다.
+상한을 더합니다(합집합 상한). 상한은 넣은 오류율만큼만 믿을 수 있습니다. 예제의 오류율은 측정값이 아니라 예시입니다. 등급별 오류율은 보정용
+데이터베이스에서 추정하고, 확정한 답의 실제 오류율 P(틀림 | 확정)은 보정에 쓰지 않은 데이터베이스에서 확인해야 합니다.
+이를 통계적 보장으로 만드는 기능은 계획 단계입니다(기능 표 참고).
 
 ## 기능
 
@@ -218,7 +222,7 @@ python -m pytest -q          # 예제 데이터에서의 명령줄 도구 테스
 
 ## 인용
 
-논문이나 보존용 릴리스가 나오기 전까지의 임시 인용 정보입니다.
+이 소프트웨어를 쓰신다면 다음과 같이 인용해 주십시오.
 
 ```bibtex
 @software{kim_sql_semantic_ledger,
@@ -226,9 +230,23 @@ python -m pytest -q          # 예제 데이터에서의 명령줄 도구 테스
   title   = {sql-semantic-ledger: reference implementation of LEDGER (Lifecycle of Evidence-graded Definitions: Generation, Evaluation, Revalidation)},
   version = {0.1.0a1},
   year    = {2026},
-  url     = {<repository URL>}
+  url     = {https://github.com/timothy-coshin/sql-semantic-ledger}
 }
 ```
+
+## 저장소 구성
+
+| 경로 | 내용 |
+|---|---|
+| `src/sql_semantic_ledger/` | 패키지: `model`(장부), `parse`·`induce`(만들기), `code_sources`·`multisource`(다른 증거원), `checks`·`grade`·`bound`·`engine`(믿기), `revalidate`(고치기), `cli` |
+| `tests/` | pytest 테스트(예제 데이터로 명령줄 도구와 demo 실행 포함) |
+| `examples/toy_shop/` | 가상의 작은 쇼핑몰: DB 생성기, SQL 이력, 서비스 코드, 지표 YAML, 저장된 답변, `demo.py` |
+| `CHANGELOG.md` | 변경 기록 |
+
+## 기여와 문의
+
+버그 제보와 질문은 [이슈 게시판](https://github.com/timothy-coshin/sql-semantic-ledger/issues)에 남겨 주십시오. 실행한 명령이나 코드, SQL 방언, 오류 메시지 전체를
+함께 적어 주시면 좋습니다. 풀 리퀘스트에는 테스트(`python -m pytest -q`)를 함께 넣어 주십시오.
 
 ## 라이선스와 저자
 
