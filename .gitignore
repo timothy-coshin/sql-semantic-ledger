@@ -1,0 +1,17 @@
+# Python build and test output
+__pycache__/
+*.py[cod]
+*.egg-info
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.venv/
+venv/
+
+# Databases and ledgers made by the examples and the README walkthrough
+examples/**/*.sqlite
+*.sqlite
+*.sqlite-journal
+/ledger.json
+/code.jsonl
